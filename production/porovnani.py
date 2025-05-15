@@ -1,52 +1,37 @@
-from utils import handle_incoming_message
-from utils import get_nearby_mac_addresses
-
 import re
-from bleak import BleakScanner
 
-async def get_nearby_mac_addresses():
-    """Retrieve a list of nearby MAC addresses using BLE scanning."""
-    try:
-        devices = await BleakScanner.discover(timeout=5.0)
-        macs = [device.address for device in devices]
-        print(f"Nearby MAC addresses: {macs}")  # Debugging log
-        return macs
-    except Exception as e:
-        print(f"Error during BLE scanning: {e}")
-        return []
+def normalize_mac_address(mac_address):
+    """Normalizuje MAC adresu do formátu XXXXXXXXXXXX (velká písmena)."""
+    if mac_address is None:
+        return ""
+    return re.sub(r'[^a-fA-F0-9]', '', str(mac_address)).upper()
 
-def handle_incoming_message(message):
+def verify_device(received_mac_from_gatt_client, user_mac_to_compare):
     """
-    Handle an incoming message by extracting the MAC address,
-    comparing it with nearby MAC addresses, and outputting the result.
+    Ověří, zda MAC adresa přijatá od GATT klienta odpovídá
+    známé MAC adrese uživatele.
     """
-    try:
-        # Extract MAC address from the message
-        mac_address = message.get("mac")
-        if not mac_address:
-            print("No MAC address found in the message.")
-            return
+    normalized_received_mac = normalize_mac_address(received_mac_from_gatt_client)
+    normalized_user_mac = normalize_mac_address(user_mac_to_compare)
 
-        # Retrieve nearby MAC addresses
-        nearby_macs = asyncio.run(get_nearby_mac_addresses())
+    if normalized_received_mac and normalized_user_mac and normalized_received_mac == normalized_user_mac:
+        print(f"GATT OVĚŘENÍ ÚSPĚŠNÉ: Zařízení {received_mac_from_gatt_client} (normalizováno: {normalized_received_mac}) odpovídá {user_mac_to_compare} (normalizováno: {normalized_user_mac}).")
+        return True
+    else:
+        print(f"GATT OVĚŘENÍ NEÚSPĚŠNÉ: Zařízení {received_mac_from_gatt_client} (normalizováno: {normalized_received_mac}) neodpovídá {user_mac_to_compare} (normalizováno: {normalized_user_mac}).")
+        return False
 
-        # Normalize MAC address formats
-        def normalize_mac(mac):
-            return re.sub(r'[^A-Fa-f0-9]', '', mac).upper()
-
-        normalized_mac = normalize_mac(mac_address)
-        normalized_nearby_macs = [normalize_mac(mac) for mac in nearby_macs]
-
-        # Compare the MAC address with the nearby list
-        if normalized_mac in normalized_nearby_macs:
-            print(f"MAC address {mac_address} is nearby.")
-        else:
-            print(f"MAC address {mac_address} is not nearby.")
-    except Exception as e:
-        print(f"Error handling the message: {e}")
-
-# Example usage
-from utils import handle_message
-# Example usage
-# Removed reference to simulate_manual_sender
-
+def check_if_device_is_nearby(mac_address_to_check, list_of_nearby_macs):
+    """
+    Zkontroluje, zda je daná MAC adresa přítomna v seznamu MAC adres okolních zařízení.
+    Používá se ve vypis.py.
+    """
+    normalized_mac = normalize_mac_address(mac_address_to_check)
+    normalized_nearby_macs = [normalize_mac_address(mac) for mac in list_of_nearby_macs]
+    
+    is_nearby = normalized_mac in normalized_nearby_macs
+    if is_nearby:
+        print(f"KONTROLA OKOLÍ (pro vypis.py): Zařízení {mac_address_to_check} je v seznamu okolních zařízení.")
+    else:
+        print(f"KONTROLA OKOLÍ (pro vypis.py): Zařízení {mac_address_to_check} není v seznamu okolních zařízení.")
+    return is_nearby

@@ -2,12 +2,15 @@ import asyncio
 from bleak import BleakScanner, BleakClient
 import porovnani
 
-async def handle_message(device_address, uuid):
+def handle_message(device_address, data_string):
     """
-    Process the received message and send it to porovnani.py for further processing.
+    Tato funkce je zavolána, když server přijme data přes GATT Write.
     """
-    print(f"Received message from device: {device_address}, UUID: {uuid}")
-    porovnani.verify_device(device_address, uuid)
+    print(f"--- PRIJIMAC MODUL ---")
+    print(f"Přijata zpráva od zařízení: {device_address}")
+    print(f"Obsah zprávy (jako string): {data_string}")
+    print(f"-----------------------")
+    #porovnani.verify_device(device_address, uuid)
 
 async def main():
     """
